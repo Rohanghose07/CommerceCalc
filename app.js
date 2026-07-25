@@ -1,0 +1,121 @@
+// Standard calculator engine
+(() => {
+  const expressionEl = document.getElementById('expressionDisplay');
+  const answerEl = document.getElementById('answerDisplay');
+  const memoryEl = document.getElementById('memoryIndicator');
+  let expression = '';
+  let lastAnswer = 0;
+  let memory = Number(localStorage.getItem('ccp-memory') || 0);
+  let justSolved = false;
+
+  const format = value => {
+    if (!Number.isFinite(value)) return 'Error';
+    const rounded = Math.abs(value) < 1e-12 ? 0 : Number(value.toPrecision(12));
+    return rounded.toLocaleString('en-GB', { maximumFractionDigits: 10, useGrouping: true });
+  };
+  const safeEvaluate = raw => {
+    let s = raw.replace(/×/g,'*').replace(/÷/g,'/').replace(/−/g,'-').replace(/,/g,'').replace(/\^/g,'**');
+    if (!s || !/^[0-9+\-*/().\s*]+$/.test(s)) throw new Error('Invalid expression');
+    const result = Function('"use strict"; return (' + s + ')')();
+    if (!Number.isFinite(result)) throw new Error('Math error');
+    return result;
+  };
+  const currentValue = () => { try { return expression ? safeEvaluate(expression) : lastAnswer; } catch { return lastAnswer; } };
+  const preview = () => {
+    expressionEl.textContent = expression || '0';
+    try { answerEl.textContent = expression ? format(safeEvaluate(expression)) : format(lastAnswer); }
+    catch { answerEl.textContent = expression ? '…' : format(lastAnswer); }
+    memoryEl.textContent = memory ? 'M' : '';
+  };
+  const append = value => {
+    if (justSolved && /[0-9.(]/.test(value)) expression = '';
+    justSolved = false;
+    const isOperator = /[+×÷−]/.test(value);
+    if (isOperator && (!expression || /[+×÷−]$/.test(expression))) expression = expression.replace(/[+×÷−]$/, '') + value;
+    else if (value === '.' && /(?:^|[+×÷−(])\d*\.[0-9]*$/.test(expression)) return;
+    else expression += value;
+    preview();
+  };
+  const solve = () => {
+    try {
+      const result = safeEvaluate(expression || String(lastAnswer));
+      const original = expression || String(lastAnswer);
+      lastAnswer = result; expression = String(result); justSolved = true; preview();
+      if (typeof saveHistory === 'function') saveHistory('Standard Calculator', `${original} = ${format(result)}`);
+    } catch { answerEl.textContent = 'Error'; }
+  };
+  const applyPercent = () => {
+    if (!expression) return;
+    expression = expression.replace(/(-?\d*\.?\d+)$/, m => String(Number(m) / 100)); preview();
+  };
+  const unary = type => {
+    const v = currentValue();
+    if (type === 'sqrt' && v < 0) { answerEl.textContent='Error'; return; }
+    lastAnswer = type === 'sqrt' ? Math.sqrt(v) : v * v;
+    expression = String(lastAnswer); justSolved = true; preview();
+  };
+  document.querySelector('.physical-calculator').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.value) append(b.dataset.value);
+    const a = b.dataset.action;
+    if (a === 'clear') { expression=''; lastAnswer=0; justSolved=false; preview(); }
+    if (a === 'backspace') { expression=expression.slice(0,-1); preview(); }
+    if (a === 'equals') solve();
+    if (a === 'percent') applyPercent();
+    if (a === 'sqrt' || a === 'square') unary(a);
+    if (a === 'toggle-sign') { expression = expression ? (expression.startsWith('-') ? expression.slice(1) : '-' + expression) : String(-lastAnswer); preview(); }
+    if (a === 'memory-clear') { memory=0; localStorage.removeItem('ccp-memory'); preview(); }
+    if (a === 'memory-recall') { append(String(memory)); }
+    if (a === 'memory-add') { memory += currentValue(); localStorage.setItem('ccp-memory',memory); preview(); }
+    if (a === 'memory-subtract') { memory -= currentValue(); localStorage.setItem('ccp-memory',memory); preview(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (document.activeElement?.matches('input,textarea,select')) return;
+    const map = {'*':'×','/':'÷','-':'−'};
+    if (/^[0-9.+()*/-]$/.test(e.key)) { e.preventDefault(); append(map[e.key] || e.key); }
+    else if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); solve(); }
+    else if (e.key === 'Backspace') { e.preventDefault(); expression=expression.slice(0,-1); preview(); }
+    else if (e.key === 'Escape' || e.key === 'Delete') { expression=''; lastAnswer=0; preview(); }
+    else if (e.key === '%') { e.preventDefault(); applyPercent(); }
+  });
+  document.getElementById('copyDisplay').onclick = async () => { try { await navigator.clipboard.writeText(String(lastAnswer)); } catch {} };
+  preview();
+})();
+const money = n => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP',maximumFractionDigits:2}).format(n);
+const num = n => new Intl.NumberFormat('en-GB',{maximumFractionDigits:4}).format(n);
+const calculators = [
+{id:'percentage',title:'Percentage Calculator',category:'Business Mathematics',icon:'%',description:'Find a percentage of any value.',fields:[['value','Value','number'],['rate','Percentage (%)','number']],calc:v=>({result:num(v.value*v.rate/100),formula:'Result = Value × Percentage ÷ 100',steps:`${v.value} × ${v.rate} ÷ 100 = ${num(v.value*v.rate/100)}`})},
+{id:'profit',title:'Profit & Loss',category:'Business Mathematics',icon:'P/L',description:'Calculate profit, loss and percentage.',fields:[['cost','Cost Price','number'],['selling','Selling Price','number']],calc:v=>{const d=v.selling-v.cost,p=v.cost?d/v.cost*100:0;return{result:`${d>=0?'Profit':'Loss'}: ${money(Math.abs(d))}`,formula:'Profit/Loss = Selling Price − Cost Price',steps:`Difference: ${money(v.selling)} − ${money(v.cost)} = ${money(d)}\nPercentage: ${num(Math.abs(p))}%`}}},
+{id:'discount',title:'Discount Calculator',category:'Business Mathematics',icon:'−%',description:'Find discount amount and final price.',fields:[['price','Marked Price','number'],['rate','Discount (%)','number']],calc:v=>{const d=v.price*v.rate/100;return{result:money(v.price-d),formula:'Final Price = Marked Price − Discount',steps:`Discount = ${money(v.price)} × ${v.rate}% = ${money(d)}\nFinal price = ${money(v.price-d)}`}}},
+{id:'si',title:'Simple Interest',category:'Finance',icon:'SI',description:'Calculate simple interest and maturity value.',fields:[['principal','Principal','number'],['rate','Annual Rate (%)','number'],['time','Time (years)','number']],calc:v=>{const i=v.principal*v.rate*v.time/100;return{result:money(i),formula:'SI = P × R × T ÷ 100',steps:`Interest = ${money(i)}\nTotal amount = ${money(v.principal+i)}`}}},
+{id:'ci',title:'Compound Interest',category:'Finance',icon:'CI',description:'Calculate annual compound interest.',fields:[['principal','Principal','number'],['rate','Annual Rate (%)','number'],['time','Time (years)','number']],calc:v=>{const a=v.principal*Math.pow(1+v.rate/100,v.time),i=a-v.principal;return{result:money(i),formula:'A = P(1 + R/100)^T',steps:`Maturity amount = ${money(a)}\nCompound interest = ${money(i)}`}}},
+{id:'emi',title:'EMI Calculator',category:'Finance',icon:'EMI',description:'Estimate monthly loan instalment.',fields:[['principal','Loan Amount','number'],['rate','Annual Interest (%)','number'],['months','Tenure (months)','number']],calc:v=>{const r=v.rate/1200,n=v.months,e=r? v.principal*r*Math.pow(1+r,n)/(Math.pow(1+r,n)-1):v.principal/n;return{result:money(e),formula:'EMI = P × r(1+r)^n ÷ ((1+r)^n−1)',steps:`Monthly EMI = ${money(e)}\nTotal payment = ${money(e*n)}\nTotal interest = ${money(e*n-v.principal)}`}}},
+{id:'gst',title:'GST Calculator',category:'Tax',icon:'GST',description:'Add or remove GST from an amount.',fields:[['amount','Amount','number'],['rate','GST Rate (%)','number'],['mode','Mode','select',['Add GST','Remove GST']]],calc:v=>{if(v.mode==='Remove GST'){const base=v.amount/(1+v.rate/100),g=v.amount-base;return{result:money(base),formula:'Base = Inclusive Amount ÷ (1 + GST Rate)',steps:`Base amount = ${money(base)}\nGST included = ${money(g)}`}}const g=v.amount*v.rate/100;return{result:money(v.amount+g),formula:'Total = Base + GST',steps:`GST = ${money(g)}\nTotal = ${money(v.amount+g)}`}}},
+{id:'slm',title:'SLM Depreciation',category:'Accounting',icon:'SLM',description:'Straight-line depreciation per year.',fields:[['cost','Asset Cost','number'],['salvage','Residual Value','number'],['life','Useful Life (years)','number']],calc:v=>{const d=(v.cost-v.salvage)/v.life;return{result:money(d),formula:'Depreciation = (Cost − Residual Value) ÷ Useful Life',steps:`Annual depreciation = ${money(d)}`}}},
+{id:'wdv',title:'WDV Depreciation',category:'Accounting',icon:'WDV',description:'Written-down value after a period.',fields:[['cost','Opening Book Value','number'],['rate','Depreciation Rate (%)','number'],['years','Number of Years','number']],calc:v=>{const end=v.cost*Math.pow(1-v.rate/100,v.years),d=v.cost-end;return{result:money(end),formula:'Closing Value = Cost × (1 − Rate)^Years',steps:`Total depreciation = ${money(d)}\nClosing book value = ${money(end)}`}}},
+{id:'bep',title:'Break-even Point',category:'Accounting',icon:'BEP',description:'Find units and sales needed to break even.',fields:[['fixed','Fixed Costs','number'],['price','Selling Price per Unit','number'],['variable','Variable Cost per Unit','number']],calc:v=>{const c=v.price-v.variable,u=v.fixed/c;return{result:`${num(u)} units`,formula:'BEP Units = Fixed Costs ÷ Contribution per Unit',steps:`Contribution per unit = ${money(c)}\nBreak-even sales = ${money(u*v.price)}`}}},
+{id:'currentratio',title:'Current Ratio',category:'Accounting',icon:'CR',description:'Measure short-term liquidity.',fields:[['assets','Current Assets','number'],['liabilities','Current Liabilities','number']],calc:v=>({result:`${num(v.assets/v.liabilities)} : 1`,formula:'Current Ratio = Current Assets ÷ Current Liabilities',steps:`${money(v.assets)} ÷ ${money(v.liabilities)} = ${num(v.assets/v.liabilities)}`})},
+{id:'gpm',title:'Gross Profit Margin',category:'Accounting',icon:'GP%',description:'Calculate gross profit percentage.',fields:[['sales','Net Sales','number'],['cogs','Cost of Goods Sold','number']],calc:v=>{const gp=v.sales-v.cogs,m=gp/v.sales*100;return{result:`${num(m)}%`,formula:'Gross Profit Margin = Gross Profit ÷ Sales × 100',steps:`Gross profit = ${money(gp)}\nMargin = ${num(m)}%`}}},
+{id:'npv',title:'NPV Calculator',category:'Finance',icon:'NPV',description:'Calculate net present value from cash flows.',fields:[['investment','Initial Investment','number'],['rate','Discount Rate (%)','number'],['flows','Cash Flows (comma-separated)','text']],calc:v=>{const flows=String(v.flows).split(',').map(Number).filter(x=>!isNaN(x));let pv=flows.reduce((s,x,i)=>s+x/Math.pow(1+v.rate/100,i+1),0),n=pv-v.investment;return{result:money(n),formula:'NPV = Σ Cash Flowₜ/(1+r)ᵗ − Initial Investment',steps:`Present value of inflows = ${money(pv)}\nNPV = ${money(n)}`}}},
+{id:'payback',title:'Payback Period',category:'Finance',icon:'PB',description:'Estimate investment recovery time.',fields:[['investment','Initial Investment','number'],['cashflow','Annual Cash Inflow','number']],calc:v=>({result:`${num(v.investment/v.cashflow)} years`,formula:'Payback Period = Initial Investment ÷ Annual Cash Inflow',steps:`${money(v.investment)} ÷ ${money(v.cashflow)} = ${num(v.investment/v.cashflow)} years`})},
+{id:'mean',title:'Mean Calculator',category:'Statistics',icon:'x̄',description:'Find the arithmetic mean of a dataset.',fields:[['values','Values (comma-separated)','text']],calc:v=>{const a=String(v.values).split(',').map(Number).filter(x=>!isNaN(x)),m=a.reduce((s,x)=>s+x,0)/a.length;return{result:num(m),formula:'Mean = Sum of Values ÷ Number of Values',steps:`Sum = ${num(a.reduce((s,x)=>s+x,0))}\nCount = ${a.length}`}}},
+{id:'median',title:'Median Calculator',category:'Statistics',icon:'Md',description:'Find the middle value of a dataset.',fields:[['values','Values (comma-separated)','text']],calc:v=>{const a=String(v.values).split(',').map(Number).filter(x=>!isNaN(x)).sort((a,b)=>a-b),n=a.length,m=n%2?a[(n-1)/2]:(a[n/2-1]+a[n/2])/2;return{result:num(m),formula:'Median = Middle value after sorting',steps:`Sorted values: ${a.join(', ')}`}}},
+{id:'mode',title:'Mode Calculator',category:'Statistics',icon:'Mo',description:'Find the most frequent value.',fields:[['values','Values (comma-separated)','text']],calc:v=>{const a=String(v.values).split(',').map(Number).filter(x=>!isNaN(x)),f={};a.forEach(x=>f[x]=(f[x]||0)+1);const max=Math.max(...Object.values(f)),m=Object.keys(f).filter(k=>f[k]===max);return{result:m.join(', '),formula:'Mode = Value(s) with highest frequency',steps:`Highest frequency = ${max}`}}},
+{id:'sd',title:'Standard Deviation',category:'Statistics',icon:'σ',description:'Calculate population standard deviation.',fields:[['values','Values (comma-separated)','text']],calc:v=>{const a=String(v.values).split(',').map(Number).filter(x=>!isNaN(x)),mean=a.reduce((s,x)=>s+x,0)/a.length,variance=a.reduce((s,x)=>s+(x-mean)**2,0)/a.length,sd=Math.sqrt(variance);return{result:num(sd),formula:'σ = √[Σ(x−μ)² ÷ N]',steps:`Mean = ${num(mean)}\nVariance = ${num(variance)}\nStandard deviation = ${num(sd)}`}}},
+{id:'elasticity',title:'Price Elasticity',category:'Economics',icon:'Ed',description:'Calculate price elasticity of demand.',fields:[['qchange','% Change in Quantity Demanded','number'],['pchange','% Change in Price','number']],calc:v=>{const e=v.qchange/v.pchange;return{result:num(e),formula:'Elasticity = % Change in Quantity ÷ % Change in Price',steps:`Absolute elasticity = ${num(Math.abs(e))}\n${Math.abs(e)>1?'Elastic demand':Math.abs(e)<1?'Inelastic demand':'Unit elastic demand'}`}}},
+{id:'weighted',title:'Weighted Average',category:'Statistics',icon:'WA',description:'Calculate a weighted mean.',fields:[['values','Values (comma-separated)','text'],['weights','Weights (comma-separated)','text']],calc:v=>{const a=String(v.values).split(',').map(Number),w=String(v.weights).split(',').map(Number),sumw=w.reduce((s,x)=>s+x,0),r=a.reduce((s,x,i)=>s+x*(w[i]||0),0)/sumw;return{result:num(r),formula:'Weighted Average = Σ(Value × Weight) ÷ ΣWeights',steps:`Total weight = ${num(sumw)}\nWeighted average = ${num(r)}`}}}
+];
+
+const grid=document.getElementById('calculatorGrid'),modal=document.getElementById('calculatorModal'),form=document.getElementById('calculatorForm');let active=null,currentCategory='all';
+function render(list=calculators){grid.innerHTML=list.map(c=>`<article class="calc-card" data-id="${c.id}"><div class="calc-icon">${c.icon}</div><h3>${c.title}</h3><p>${c.description}</p><div class="category">${c.category}</div></article>`).join('')||'<p class="empty">No calculators found.</p>';document.getElementById('calcCount').textContent=calculators.length;grid.querySelectorAll('.calc-card').forEach(x=>x.onclick=()=>openCalc(x.dataset.id));}
+function openCalc(id){active=calculators.find(c=>c.id===id);document.getElementById('modalTitle').textContent=active.title;document.getElementById('modalCategory').textContent=active.category;document.getElementById('modalDescription').textContent=active.description;form.innerHTML=active.fields.map(f=>{if(f[2]==='select')return`<div class="field"><label>${f[1]}</label><select name="${f[0]}">${f[3].map(o=>`<option>${o}</option>`).join('')}</select></div>`;return`<div class="field ${f[2]==='text'?'full':''}"><label>${f[1]}</label><input name="${f[0]}" type="${f[2]}" step="any" placeholder="Enter ${f[1].toLowerCase()}" required></div>`}).join('');document.getElementById('resultBox').classList.add('hidden');modal.classList.remove('hidden')}
+function calculate(){const data={};new FormData(form).forEach((v,k)=>data[k]=v===''?0:(isNaN(v)||v.trim()===''?v:Number(v)));try{const out=active.calc(data);document.getElementById('resultValue').textContent=out.result;document.getElementById('formulaText').textContent=out.formula;document.getElementById('stepsText').textContent=out.steps;document.getElementById('resultBox').classList.remove('hidden');saveHistory(active.title,out.result)}catch(e){alert('Please check your inputs and try again.')}
+}
+function saveHistory(title,result){const h=JSON.parse(localStorage.getItem('ccp-history')||'[]');h.unshift({title,result,date:new Date().toLocaleString('en-GB')});localStorage.setItem('ccp-history',JSON.stringify(h.slice(0,10)));renderHistory()}
+function renderHistory(){const h=JSON.parse(localStorage.getItem('ccp-history')||'[]');document.getElementById('historyList').innerHTML=h.length?h.map(x=>`<div class="history-item"><div><strong>${x.title}</strong><span>${x.date}</span></div><strong>${x.result}</strong></div>`).join(''):'<p class="empty">No calculations yet.</p>'}
+document.getElementById('calculateBtn').onclick=calculate;document.getElementById('resetBtn').onclick=()=>{form.reset();document.getElementById('resultBox').classList.add('hidden')};document.getElementById('closeModal').onclick=()=>modal.classList.add('hidden');modal.onclick=e=>{if(e.target===modal)modal.classList.add('hidden')};
+document.getElementById('searchInput').oninput=e=>{const q=e.target.value.toLowerCase();render(calculators.filter(c=>(currentCategory==='all'||c.category===currentCategory)&&(`${c.title} ${c.description} ${c.category}`).toLowerCase().includes(q)))};
+document.querySelectorAll('.nav-item').forEach(b=>b.onclick=()=>{document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));b.classList.add('active');currentCategory=b.dataset.category;document.getElementById('sectionTitle').textContent=currentCategory==='all'?'All Calculators':currentCategory;const q=document.getElementById('searchInput').value.toLowerCase();render(calculators.filter(c=>(currentCategory==='all'||c.category===currentCategory)&&(`${c.title} ${c.description} ${c.category}`).toLowerCase().includes(q)));document.getElementById('sidebar').classList.remove('open')});
+document.getElementById('clearHistoryBtn').onclick=()=>{localStorage.removeItem('ccp-history');renderHistory()};document.getElementById('menuBtn').onclick=()=>document.getElementById('sidebar').classList.toggle('open');
+const savedTheme=localStorage.getItem('ccp-theme');if(savedTheme)document.documentElement.dataset.theme=savedTheme;document.getElementById('themeBtn').onclick=()=>{const t=document.documentElement.dataset.theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;localStorage.setItem('ccp-theme',t)};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');render();renderHistory();

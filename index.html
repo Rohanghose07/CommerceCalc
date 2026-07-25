@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <meta name="description" content="CommerceCalc Pro — a complete basic and commerce calculator for students.">
+  <title>CommerceCalc Pro | Developed by Rohan Ghose</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-mark">C</div><div><strong>CommerceCalc</strong><span>Pro</span></div></div>
+    <nav>
+      <button class="nav-item active" data-category="all">⌨ Standard Calculator</button>
+      <button class="nav-item" data-category="Business Mathematics">Business Mathematics</button>
+      <button class="nav-item" data-category="Accounting">Accounting</button>
+      <button class="nav-item" data-category="Finance">Finance</button>
+      <button class="nav-item" data-category="Statistics">Statistics</button>
+      <button class="nav-item" data-category="Economics">Economics</button>
+      <button class="nav-item" data-category="Tax">GST & Tax</button>
+    </nav>
+    <div class="side-note"><small>Made for students</small><p>Basic maths and specialist commerce tools in one installable app.</p></div>
+  </aside>
+
+  <main class="main-content">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+      <div class="top-title"><strong>CommerceCalc Pro</strong><span>All-in-one student calculator</span></div>
+      <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+    </header>
+
+    <section class="calculator-stage" id="standardCalculator">
+      <div class="calculator-intro">
+        <span class="eyebrow">STANDARD CALCULATOR</span>
+        <h1>Calculate anything. Learn commerce.</h1>
+        <p>Use the full calculator for everyday maths, then open specialised tools for accounting, finance, tax and statistics.</p>
+        <div class="feature-chips"><span>Keyboard enabled</span><span>Memory functions</span><span>Calculation history</span><span>Works offline</span></div>
+      </div>
+
+      <div class="physical-calculator" aria-label="Standard calculator">
+        <div class="calc-display">
+          <div class="display-top"><span id="memoryIndicator"></span><button id="copyDisplay" title="Copy result">Copy</button></div>
+          <div class="expression" id="expressionDisplay">0</div>
+          <div class="answer" id="answerDisplay">0</div>
+        </div>
+        <div class="memory-row">
+          <button data-action="memory-clear">MC</button><button data-action="memory-recall">MR</button><button data-action="memory-add">M+</button><button data-action="memory-subtract">M−</button>
+        </div>
+        <div class="keypad">
+          <button class="key function" data-value="(">(</button><button class="key function" data-value=")">)</button><button class="key function" data-action="percent">%</button><button class="key danger" data-action="clear">AC</button>
+          <button class="key function" data-action="sqrt">√</button><button class="key function" data-action="square">x²</button><button class="key function" data-action="backspace">⌫</button><button class="key operator" data-value="÷">÷</button>
+          <button class="key" data-value="7">7</button><button class="key" data-value="8">8</button><button class="key" data-value="9">9</button><button class="key operator" data-value="×">×</button>
+          <button class="key" data-value="4">4</button><button class="key" data-value="5">5</button><button class="key" data-value="6">6</button><button class="key operator" data-value="−">−</button>
+          <button class="key" data-value="1">1</button><button class="key" data-value="2">2</button><button class="key" data-value="3">3</button><button class="key operator" data-value="+">+</button>
+          <button class="key function" data-action="toggle-sign">±</button><button class="key" data-value="0">0</button><button class="key" data-value=".">.</button><button class="key equals" data-action="equals">=</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="tool-section">
+      <div class="section-head">
+        <div><span class="eyebrow dark">COMMERCE TOOLKIT</span><h2 id="sectionTitle">Specialised Calculators</h2><p>Choose a calculator for formula-based, step-by-step results.</p></div>
+        <div class="section-actions"><button class="secondary-btn" id="clearHistoryBtn">Clear History</button></div>
+      </div>
+      <div class="search-wrap"><span>⌕</span><input id="searchInput" type="search" placeholder="Search GST, EMI, depreciation, mean, profit..." /></div>
+      <section id="calculatorGrid" class="calculator-grid"></section>
+    </section>
+
+    <section class="history-panel">
+      <div class="section-head compact"><div><h2>Recent Calculations</h2><p>Stored privately on this device.</p></div></div>
+      <div id="historyList" class="history-list"></div>
+    </section>
+    <span id="calcCount" hidden></span>
+<section class="history-panel">
+<div class="section-head compact"><div><h2>About</h2></div></div>
+<p><strong>CommerceCalc Pro</strong> is an all‑in‑one calculator for commerce students featuring standard calculations and specialised accounting, finance, taxation, economics and statistics tools.</p>
+<p><strong>Developed by Rohan Ghose</strong></p>
+</section>
+
+  
+<footer class="app-footer">
+<div><strong>CommerceCalc Pro</strong></div>
+<div>One Calculator. Every Commerce Formula.</div>
+<div>Developed by <strong>Rohan Ghose</strong></div>
+<div>Version 1.0.0 • © 2026 CommerceCalc Pro. All Rights Reserved.</div>
+</footer>
+
+</main>
+</div>
+
+<div class="modal hidden" id="calculatorModal" role="dialog" aria-modal="true">
+  <div class="modal-card">
+    <button class="close-btn" id="closeModal" aria-label="Close">×</button>
+    <div class="modal-head"><span id="modalCategory" class="pill"></span><h2 id="modalTitle"></h2><p id="modalDescription"></p></div>
+    <form id="calculatorForm" class="form-grid"></form>
+    <div class="action-row"><button type="button" class="secondary-btn" id="resetBtn">Reset</button><button type="button" class="primary-btn" id="calculateBtn">Calculate</button></div>
+    <div id="resultBox" class="result-box hidden"><span>Result</span><strong id="resultValue"></strong><div id="formulaText" class="formula-text"></div><div id="stepsText" class="steps-text"></div></div>
+  </div>
+</div>
+<script src="app.js"></script>
+</body>
+</html>
