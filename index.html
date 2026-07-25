@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f172a" />
+  <title>CommerceCalc Pro</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">CC</div>
+        <div><strong>CommerceCalc</strong><span>Pro</span></div>
+      </div>
+      <nav>
+        <button class="nav-item active" data-category="all">Dashboard</button>
+        <button class="nav-item" data-category="Business Mathematics">Business Mathematics</button>
+        <button class="nav-item" data-category="Accounting">Accounting</button>
+        <button class="nav-item" data-category="Finance">Finance</button>
+        <button class="nav-item" data-category="Statistics">Statistics</button>
+        <button class="nav-item" data-category="Economics">Economics</button>
+        <button class="nav-item" data-category="Tax">GST & Tax</button>
+      </nav>
+      <div class="side-note">
+        <small>Student tools</small>
+        <p>Fast calculations with formulas and step-by-step workings.</p>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div class="search-wrap">
+          <input id="searchInput" type="search" placeholder="Search calculators, e.g. GST, EMI, depreciation..." />
+        </div>
+        <button class="icon-btn" id="themeBtn" aria-label="Toggle theme">◐</button>
+      </header>
+
+      <section class="hero">
+        <div>
+          <span class="eyebrow">ALL-IN-ONE STUDENT TOOLKIT</span>
+          <h1>Master commerce calculations in one place.</h1>
+          <p>Accounting, finance, statistics, economics, taxation and business mathematics — with clear formulas and working steps.</p>
+        </div>
+        <div class="hero-stat">
+          <strong id="calcCount">0</strong>
+          <span>Calculators</span>
+        </div>
+      </section>
+
+      <section class="quick-stats">
+        <article><span>Saved locally</span><strong>Private history</strong></article>
+        <article><span>Works anywhere</span><strong>Mobile + PC</strong></article>
+        <article><span>Study-friendly</span><strong>Formula steps</strong></article>
+      </section>
+
+      <section class="section-head">
+        <div><h2 id="sectionTitle">All Calculators</h2><p>Choose a tool to begin.</p></div>
+        <button class="secondary-btn" id="clearHistoryBtn">Clear History</button>
+      </section>
+
+      <section id="calculatorGrid" class="calculator-grid"></section>
+
+      <section class="history-panel">
+        <div class="section-head compact"><div><h2>Recent Calculations</h2><p>Your last results are stored on this device.</p></div></div>
+        <div id="historyList" class="history-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="calculatorModal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <button class="close-btn" id="closeModal" aria-label="Close">×</button>
+      <div class="modal-head">
+        <span id="modalCategory" class="pill"></span>
+        <h2 id="modalTitle"></h2>
+        <p id="modalDescription"></p>
+      </div>
+      <form id="calculatorForm" class="form-grid"></form>
+      <div class="action-row">
+        <button type="button" class="secondary-btn" id="resetBtn">Reset</button>
+        <button type="button" class="primary-btn" id="calculateBtn">Calculate</button>
+      </div>
+      <div id="resultBox" class="result-box hidden">
+        <span>Result</span>
+        <strong id="resultValue"></strong>
+        <div id="formulaText" class="formula-text"></div>
+        <div id="stepsText" class="steps-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
